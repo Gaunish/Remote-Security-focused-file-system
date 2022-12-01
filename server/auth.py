@@ -1,6 +1,7 @@
 import sqlite3
 import bcrypt
 import random
+import hmac, hashlib
 
 class User:
 
@@ -26,8 +27,22 @@ class User:
 
         self.username = name 
         return True
+    
+    def getSalt(self, name):
+        try:
+            query = "select * from user where username = '" + name + "';"
+            self.cursor.execute(query)
+            result = self.cursor.fetchall()
+            if len(result) != 1:
+                return False
+                
+            return result[0][3]
 
-    def login(self, name, password):
+        except sqlite3.Error as error:
+            print('Error: ', error)
+        return None
+
+    def login(self, name, password, nonce):
         try:
             query = "select * from user where username = '" + name + "';"
             self.cursor.execute(query)
@@ -35,8 +50,10 @@ class User:
             if len(result) != 1:
                 return False
 
-            passwd = bcrypt.hashpw(str(password).encode('utf-8'), result[0][3].encode('utf-8'))
-            if result[0][2] == passwd.decode():
+            #passwd = bcrypt.hashpw(str(password).encode('utf-8'), result[0][3].encode('utf-8'))
+            h = hmac.new(nonce, result[0][2], hashlib.sha256)
+            passwd = h.hexdigest().decode()
+            if password == passwd:
                 self.username = name
                 return True
         
