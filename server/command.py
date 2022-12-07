@@ -18,7 +18,7 @@ class Command(ABC):
 class LinuxCommand(Command):
     def execute(self) -> str:
         result = subprocess.run(self.input.split(), stderr=subprocess.PIPE, text=True, stdout=subprocess.PIPE)
-        print(result)
+        # print(result)
         if result.returncode == 0:
             return result.stdout
         else:

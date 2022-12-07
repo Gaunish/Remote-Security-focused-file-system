@@ -14,9 +14,9 @@ class Parser:
     def __init__(self) -> None:
         pass
 
-    def check2Arguments(self, input, keyword) -> str:  
+    def checkNArguments(self, input, keyword, n) -> str:  
         words = input.split()
-        if (len(words)!=2):
+        if (len(words)!=n):
             return 'unknown'
         if words[0] == keyword:
             return keyword
@@ -36,13 +36,13 @@ class Parser:
             return 'cd'
         elif input.startswith('get'):            
             # Syntax: get filename        
-            return self.check2Arguments(input, 'get')
+            return self.checkNArguments(input, 'get', 2)
         elif input.startswith('put'):
             # Systax: put filename
-            return self.check2Arguments(input, 'put')
+            return self.checkNArguments(input, 'put', 2)
         elif input.startswith('delete'):
             # Syntax: delete filename
-            return self.check2Arguments(input, 'delete')
+            return self.checkNArguments(input, 'delete', 2)
         elif input.startswith('quit'):
             # Syantax: quit
             return 'quit'
@@ -71,8 +71,7 @@ class Server:
 
             while True:            
                 if self.user.getUser()=='':
-                    # Request for login/register
-                    # TODO tiny state machine managing 
+                    # Request for login/register                    
                     # set username, switch dir to the user root directory
                     # TODO register or login
                     self.user.username = 'sample_user1' # TODO remove this line
@@ -82,10 +81,11 @@ class Server:
                     logging.info("Current user: " + self.user.getUser())
                     self.sendOutputToClient('Hello '+self.user.getUser())  
                     os.chdir(os.path.join(self.base_dir, self.user_dir))
-                    print(os.getcwd())
+                    # print(os.getcwd())
                 else:                              
                     # Running state machine
                     cmd_str = self.recvInputFromClient()
+                    cmd_str_list = cmd_str.split()
                     logging.info('Command received: '+cmd_str)
                     flag = self.parser.parse(cmd_str)
                     if flag=='unknown':                    
@@ -118,6 +118,23 @@ class Server:
                         self.sendOutputToClient('QUITTIUQ')
                         self.conn.close()
                         break;
+                    elif flag=='put':                        
+                        response = 'waitingforfileupload14235 '+cmd_str_list[1]
+                        self.sendOutputToClient(response)
+                        self.recvFileFromClient(cmd_str_list[1])
+                    elif flag=='get':                        
+                        if path.isfile(cmd_str_list[1]):
+                            self.sendOutputToClient("6c1993b120701165c72983b9c624f88f")
+                            self.sendFileToClient(cmd_str_list[1])
+                        else:
+                            self.sendFileToClient("File %s not found." % cmd_str_list[1])
+                    elif flag=='delete':
+                        filename = cmd_str.split()[1]
+                        cmd = LinuxCommand('rm '+filename)
+                        result = cmd.execute()
+                        if result=='':
+                            result = "Deletion complete"
+                        self.sendOutputToClient(result)
                     else:
                         # TODO execute commands and return its output
                         pass
@@ -130,12 +147,32 @@ class Server:
         return input.decode()
 
     def sendFileToClient(self, filename) -> None:
-        # TODO
-        pass
+        with open(filename, "rb") as f:
+            while True:
+                # read the bytes from the file
+                bytes_read = f.read(4096)
+                if not bytes_read:
+                    # file transmitting is done
+                    break
+                # we use sendall to assure transimission in 
+                # busy networks
+                self.conn.sendall(bytes_read)
 
-    def recvFileFromClient(self) -> None:
-        # TODO
-        pass
+    def recvFileFromClient(self, filename) -> None:
+        BLOCK_SIZE = 4096
+        with open(filename, "wb") as f:
+            while True:
+                # read 1024 bytes from the socket (receive)
+                bytes_read = self.conn.recv(BLOCK_SIZE)
+                # print(len(bytes_read))                
+                # write to the file the bytes we just received
+                f.write(bytes_read)   
+                if len(bytes_read) < BLOCK_SIZE:   # buggy, what if exactly BLOCK_SIZE? 
+                    # nothing is received
+                    # file transmitting is done
+                    # print('break')
+                    break                           
+
 
     def preparePath(self, target) -> None:
         if not os.path.exists(target):
