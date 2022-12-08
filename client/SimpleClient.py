@@ -2,6 +2,9 @@ import sys
 import os
 import socket
 import tqdm
+from pathlib import Path
+sys.path.append(os.path.join(Path(sys.path[0]).parent,'common'))
+from connection import Connect
 
 PORT = 7899
 IP = '127.0.0.1'
@@ -12,8 +15,11 @@ c.connect((IP, PORT))
 
 # skip login fro now
 
+connect = Connect(c)
+
 while True:
-    output = c.recv(2048).decode()    
+    # output = c.recv(2048).decode()  
+    output = connect.recvData().decode() 
     if (output=='QUITTIUQ'):
         print('User log out. Bye bye!')
         c.close()
@@ -47,7 +53,8 @@ while True:
     else:
         print(output)
     user_input = input('Input your command:\n') # we trust client that the put file exists
-    c.send(user_input.encode())
+    # c.send(user_input.encode())
+    connect.sendData(user_input.encode())
 
 
 

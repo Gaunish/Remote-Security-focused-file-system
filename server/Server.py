@@ -1,9 +1,13 @@
 import socket
 import logging
 import os
+import sys
 from os import path
 from command import LinuxCommand
 from auth import User
+from pathlib import Path
+sys.path.append(os.path.join(Path(sys.path[0]).parent,'common'))
+from connection import Connect
 
 PORT = 7899
 
@@ -58,7 +62,7 @@ class Server:
         self.s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.s.bind(("",portNum))                   
         self.base_dir = os.path.join(os.path.expanduser('~'), 'ftp')
-        self.preparePath(self.base_dir)
+        self.preparePath(self.base_dir)        
         logging.basicConfig(filename=None, level=logging.INFO, filemode='a', format='%(asctime)s - %(message)s')
 
     def start(self) -> None:
@@ -68,6 +72,7 @@ class Server:
             self.s.listen()
             (self.conn, self.c_addr) = self.s.accept()            
             logging.info('Got connection from %s: %d' % (self.c_addr[0], self.c_addr[1]))
+            self.connect = Connect(self.conn)
 
             while True:            
                 if self.user.getUser()=='':
@@ -140,10 +145,12 @@ class Server:
                         pass
     
     def sendOutputToClient(self, content) -> None:
-        self.conn.send(content.encode())
+        # self.conn.send(content.encode())
+        self.connect.sendData(content.encode())
 
     def recvInputFromClient(self) -> str:
-        input = self.conn.recv(4096)
+        # input = self.conn.recv(4096)
+        input = self.connect.recvData()
         return input.decode()
 
     def sendFileToClient(self, filename) -> None:
