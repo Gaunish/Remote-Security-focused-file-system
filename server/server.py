@@ -6,7 +6,7 @@ class Server:
     def __init__(self):
         print("Waiting for a connection...")
         self.sock = socket.socket()
-        self.sock.bind(('', 12345))
+        self.sock.bind(('', 2190))
         self.sock.listen(5)
 
         while True:

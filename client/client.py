@@ -7,12 +7,14 @@ from connection import *
 class Client:
 
     def __init__(self):
+        self.username = None
         self.sock = socket.socket()
         while True:
             server = input("Enter server name: ")
             try:
-                self.sock.connect((server, 12345))
+                self.sock.connect((server, 2190))
                 self.conn = Connect(self.sock)
+
                 break
             except:
                 print("Connection to server " + server + " failed. Please try again.\n")
@@ -21,6 +23,7 @@ class Client:
 
     def auth(self):
         option = 0
+        print("WHY???????????")
         while True: 
             try:
                 option = int(input("Please Enter:\n(1) for Login\n(2) for Register\n"))
@@ -40,21 +43,25 @@ class Client:
         username = input("Enter Username: ")
         password = input("Enter Password: ")
         self.conn.sendNonByte(username)
-        return password
+        return username, password
     
     def Register(self):
         out = False
         while out != True:
-            password = self.getDetails()
+            username, password = self.getDetails()
             self.conn.sendNonByte(password)
             out = self.conn.recvData()
             if out == "False":
                 print("Register failed, Please try again\n")
+                continue
+            else:
+                self.username = username
+                break
     
     def Login(self):
         out = False
         while out != True:
-            password = self.getDetails()
+            username, password = self.getDetails()
             userExist = self.conn.recvData()
             if userExist == "False":
                 print("username doesn't exist, Please try again\n")
@@ -71,6 +78,9 @@ class Client:
             out = self.conn.recvData()
             if out == "False":
                 print("Login failed, Please try again\n")
+            else:
+                self.username = username
+                break
 
     def __del__(self):
         self.sock.close()

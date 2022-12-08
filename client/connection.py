@@ -2,7 +2,7 @@ import bcrypt
 import random
 import socket
 from Crypto.Cipher import AES
-import pyDH
+import pyDH, time
 from Crypto.Protocol.KDF import PBKDF2
 
 class Connect:
@@ -21,7 +21,9 @@ class Connect:
     def send(self, data):
         self.write.write(data)
         self.write.write('\n')
-        self.write.write(ascii(23) + '\n')
+        self.write.flush()
+        self.write.write(ascii(23))
+        self.write.write('\n')
         self.write.flush()
     
     def recv(self):
@@ -29,9 +31,10 @@ class Connect:
         while True:
             data = self.read.readline()
             data = data.strip()
-            if not data or data == ascii(23):
+            if data == ascii(23):
                 break
-            out += data
+            if data:
+                out += data
         return out
 
     def sendNonByte(self, data):
@@ -48,38 +51,25 @@ class Connect:
 
     def sendData(self, cipher, ciphertext, tag):
         nonce = cipher.nonce
-        #print(nonce)
-        #print(ciphertext)
-        #print(tag)
-        while True:
-            self.send(nonce.decode("ISO-8859-1"))
-            self.send(ciphertext.decode("ISO-8859-1"))
-            self.send(tag.decode("ISO-8859-1"))
-            out = self.recv()
-            if out == True:
-                break
+        print(nonce)
+        print(ciphertext)
+        print(tag)
+        self.send(nonce.decode("ISO-8859-1"))
+        self.send(ciphertext.decode("ISO-8859-1"))
+        self.send(tag.decode("ISO-8859-1"))
     
     def recvData(self):
         type = self.recv()
-        data = ""
-        while True:
-            nonce = self.recv().encode("ISO-8859-1")
-            ciphertext = self.recv().encode("ISO-8859-1")
-            tag = self.recv().encode("ISO-8859-1")
-            #print(nonce)
-            #print(ciphertext)
-            #print(tag)
-            cipher = AES.new(self.sharedKey, AES.MODE_EAX, nonce)
-            try:
-                data = cipher.decrypt_and_verify(ciphertext, tag)
-            except:
-                self.send("False")
-                print("MAC failed")
-                continue 
-            self.send("True")
-            break
+        nonce = self.recv().encode("ISO-8859-1")
+        ciphertext = self.recv().encode("ISO-8859-1")
+        tag = self.recv().encode("ISO-8859-1")
+        print(nonce)
+        print(ciphertext)
+        print(tag)
+        cipher = AES.new(self.sharedKey, AES.MODE_EAX, nonce)
+        data = cipher.decrypt_and_verify(ciphertext, tag)
+
         if type == "nonByte":
             data = str(data.decode())
         print("data: " + str(data))
         return data
-    

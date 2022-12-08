@@ -13,7 +13,7 @@ class serverAuth:
         username = self.conn.recvData()
         password = self.conn.recvData()
         out = self.auth.DBregister(username, password)
-        self.conn.sendNonByte(str(out))
+        self.conn.sendNonByte(out)
         return out
 
     def login(self):
