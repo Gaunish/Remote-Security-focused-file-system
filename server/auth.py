@@ -11,7 +11,7 @@ class User:
         self.connection = sqlite3.connect(self.dbname)
         self.cursor = self.connection.cursor()
 
-    def register(self, name, password):
+    def DBregister(self, name, password):
         try:
             count = random.randint(5, 15)
             salt = bcrypt.gensalt(rounds=count)
@@ -42,7 +42,7 @@ class User:
             print('Error: ', error)
         return None
 
-    def login(self, name, password, nonce):
+    def DBlogin(self, name, password, nonce):
         try:
             query = "select * from user where username = '" + name + "';"
             self.cursor.execute(query)
