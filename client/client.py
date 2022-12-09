@@ -9,10 +9,11 @@ class Client:
     def __init__(self):
         self.username = None
         self.sock = socket.socket()
+        self.sock.settimeout(3)
         while True:
             server = input("Enter server name: ")
             try:
-                self.sock.connect((server, 2190))
+                self.sock.connect((server, 3002))
                 self.conn = Connect(self.sock)
 
                 break
@@ -23,7 +24,6 @@ class Client:
 
     def auth(self):
         option = 0
-        print("WHY???????????")
         while True: 
             try:
                 option = int(input("Please Enter:\n(1) for Login\n(2) for Register\n"))
@@ -41,14 +41,14 @@ class Client:
     
     def getDetails(self):
         username = input("Enter Username: ")
-        password = input("Enter Password: ")
         self.conn.sendNonByte(username)
-        return username, password
+        return username
     
     def Register(self):
         out = False
         while out != True:
-            username, password = self.getDetails()
+            username = self.getDetails()
+            password = input("Enter Password: ")
             self.conn.sendNonByte(password)
             out = self.conn.recvData()
             if out == "False":
@@ -61,21 +61,29 @@ class Client:
     def Login(self):
         out = False
         while out != True:
-            username, password = self.getDetails()
+            username = self.getDetails()
             userExist = self.conn.recvData()
             if userExist == "False":
                 print("username doesn't exist, Please try again\n")
                 continue
-
-            self.conn.sendNonByte(secrets.token_urlsafe()) 
+            
+            password = input("Enter Password: ")
+            ClientNonce = secrets.token_urlsafe()
+            print("ClientNonce:" + ClientNonce)
+            self.conn.sendNonByte(ClientNonce) 
             salt = self.conn.recvData()
             nonce = self.conn.recvData()
+            print("salt: " + salt)
+            print("nonce: " + nonce)
+            '''
             passwd = bcrypt.hashpw(str(password).encode('utf-8'), salt.encode('utf-8')).decode()
             h = hmac.new(nonce, passwd, hashlib.sha256)
             proof = h.hexdigest().decode()
             self.conn.sendNonByte(proof)
 
             out = self.conn.recvData()
+            '''
+            out = False
             if out == "False":
                 print("Login failed, Please try again\n")
             else:

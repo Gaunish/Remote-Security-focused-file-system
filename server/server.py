@@ -6,14 +6,14 @@ class Server:
     def __init__(self):
         print("Waiting for a connection...")
         self.sock = socket.socket()
-        self.sock.bind(('', 2190))
+        self.sock.bind(('', 3002))
         self.sock.listen(5)
 
         while True:
             self.c, addr = self.sock.accept()
             print("Connected with the Client")
             break
-
+        self.sock.settimeout(3)
         self.auth()
     
     def auth(self):

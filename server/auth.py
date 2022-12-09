@@ -34,7 +34,7 @@ class User:
             self.cursor.execute(query)
             result = self.cursor.fetchall()
             if len(result) != 1:
-                return False
+                return None
                 
             return result[0][3]
 
