@@ -7,9 +7,8 @@ from command import LinuxCommand
 from auth import User
 from pathlib import Path
 sys.path.append(os.path.join(Path(sys.path[0]).parent,'common'))
-from connection import Connect
-
-PORT = 7899
+from connection import *
+from connect import *
 
 """
 Valid commands: get, put, delete, quit, ls, cd, pwd, mkdir
@@ -57,7 +56,7 @@ class Parser:
 class Server:
     def __init__(self, portNum, parser) -> None:
         self.parser = parser
-        self.user = User()
+        self.username = ''
         self.s = socket.socket()
         self.s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.s.bind(("",portNum))                   
@@ -70,21 +69,23 @@ class Server:
             logging.info('Waiting for connection...')
             # socket start listening
             self.s.listen()
-            (self.conn, self.c_addr) = self.s.accept()            
+            (self.conn, self.c_addr) = self.s.accept()    
+            self.s.settimeout(3)        
             logging.info('Got connection from %s: %d' % (self.c_addr[0], self.c_addr[1]))
-            self.connect = Connect(self.conn)
+            # self.connect = Connect(self.conn)
 
             while True:            
-                if self.user.getUser()=='':
+                if self.username=='':
                     # Request for login/register                    
-                    # set username, switch dir to the user root directory
-                    # TODO register or login
-                    self.user.username = 'sample_user1' # TODO remove this line
-                    logging.info('User '+self.user.getUser()+' has logged in.')
-                    self.user_dir = self.user.getUser()
+                    # set username, switch dir to the user root directory                    
+                    self.auth()
+
+                    # self.user.username = 'sample_user1' # TODO remove this line
+                    logging.info('User '+self.username+' has logged in.')
+                    self.user_dir = self.username
                     self.preparePath(os.path.join(self.base_dir, self.user_dir))                
-                    logging.info("Current user: " + self.user.getUser())
-                    self.sendOutputToClient('Hello '+self.user.getUser())  
+                    logging.info("Current user: " + self.username)
+                    self.sendOutputToClient('Hello '+self.username)  
                     os.chdir(os.path.join(self.base_dir, self.user_dir))
                     # print(os.getcwd())
                 else:                              
@@ -119,7 +120,7 @@ class Server:
                         except:
                             self.sendOutputToClient("Internal Error occurred.")
                     elif flag=='quit':
-                        self.user = User()
+                        self.username = ''
                         self.sendOutputToClient('QUITTIUQ')
                         self.conn.close()
                         break;
@@ -140,17 +141,14 @@ class Server:
                         if result=='':
                             result = "Deletion complete"
                         self.sendOutputToClient(result)
-                    else:
-                        # TODO execute commands and return its output
-                        pass
     
     def sendOutputToClient(self, content) -> None:
-        # self.conn.send(content.encode())
-        self.connect.sendData(content.encode())
+        self.conn.send(content.encode())
+        # self.connect.sendData(content.encode())
 
     def recvInputFromClient(self) -> str:
-        # input = self.conn.recv(4096)
-        input = self.connect.recvData()
+        input = self.conn.recv(4096)
+        # input = self.connect.recvData()
         return input.decode()
 
     def sendFileToClient(self, filename) -> None:
@@ -186,9 +184,30 @@ class Server:
             os.mkdir(target)
             logging.info('New directory ['+target+'] is created.')
 
+    # Method to authenticate client
+    def auth(self):
+        self.c = Connect(self.conn)
+        self.Auth = serverAuth(self.c)
+        # Check whether client wants to login/register
+        opt = self.c.recvData()
+        
+        while True:
+            out = False
+            if opt == "login":
+                out = self.Auth.login()
+            else:
+                out = self.Auth.register()
+            
+            if out:
+                break
+        
+        # Get logged in username
+        self.username = self.Auth.getUser()
+
 
 def main():
-    s = Server(PORT, Parser())
+    port = input("Enter hosting port number: ")
+    s = Server(int(port), Parser())
     s.start()
 
 if __name__ == "__main__":
